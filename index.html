@@ -32,12 +32,21 @@
   var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (!ios) { var ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = 'manifest.webmanifest'; document.head.appendChild(ml); }
   var h = location.hash.replace(/^#/, ''), pend = '', seenKey = '';
+  // 아이폰 홈 화면 앱은 주소의 #... 를 버리고 열림 → 아이폰에서는 ?u=...&a=... 로 옮겨 둠
+  // (? 부분은 GitHub 서버에도 가므로 자동 로그인 열쇠 ak 는 빼고 넣음 → 앱에서 처음 한 번 비밀번호 입력)
+  var q = location.search.replace(/^\?/, '');
+  if (ios && !h && /(?:^|&)u=/.test(q)) {
+    var qu = '', qa = '';
+    q.split('&').forEach(function (p) { try { if (p.indexOf('u=') === 0) qu = decodeURIComponent(p.substring(2)); else if (p.indexOf('a=') === 0) qa = decodeURIComponent(p.substring(2)); } catch (e) { } });
+    h = 'u=' + encodeURIComponent(qu) + (qa ? '&' + qa : '');
+  }
   if (h) {
     var parts = h.split('&'), u = '', rest = [];
     parts.forEach(function (p) {
       if (p.indexOf('u=') === 0) { try { u = decodeURIComponent(p.substring(2)); } catch (e) { } }
-      else if (p) rest.push(p);
+      else if (p && !(ios && p.indexOf('ak=') === 0)) rest.push(p);
     });
+    if (ios && okUrl(u) && location.hash) history.replaceState(null, '', location.pathname + '?u=' + encodeURIComponent(u) + (rest.length ? '&a=' + encodeURIComponent(rest.join('&')) : ''));
     if (okUrl(u)) {
       put(K_URL, u);
       if (ios) { if (rest.length && get(K_SEEN) !== rest.join('&')) { pend = rest.join('&'); seenKey = pend; } }   // 처음 한 번만 넘김 (그 뒤는 화면이 스스로 기억)
@@ -49,7 +58,7 @@
     var sa = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
     var m = document.getElementById('msg');
     if (ios && sa) m.querySelector('p').innerHTML = '이 아이콘에는 메신저 정보가 없습니다.<br>아이콘을 지운 뒤, <b>사파리</b>에서 TOPLAY를 열고<br><b>⚙ 설정 → 홈 화면 추가 방법 → 앱으로 설치</b><br>→ 새 창에서 공유(□↑) → <b>홈 화면에 추가</b>를 다시 해 주세요.';
-    m.insertAdjacentHTML('beforeend', '<p style="opacity:.6;font-size:12px">진단: ' + (ios ? 'iOS' : 'other') + ' · ' + (sa ? 'app' : 'browser') + ' · hash ' + h.length + ' · v5</p>');
+    m.insertAdjacentHTML('beforeend', '<p style="opacity:.6;font-size:12px">진단: ' + (ios ? 'iOS' : 'other') + ' · ' + (sa ? 'app' : 'browser') + ' · hash ' + location.hash.length + ' · q ' + q.length + ' · v6</p>');
     m.style.display = 'block'; return;
   }
   if (!ios) pend = get(K_PEND);

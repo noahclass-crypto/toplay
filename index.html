@@ -46,7 +46,8 @@
       if (p.indexOf('u=') === 0) { try { u = decodeURIComponent(p.substring(2)); } catch (e) { } }
       else if (p && !(ios && p.indexOf('ak=') === 0)) rest.push(p);
     });
-    if (ios && okUrl(u) && location.hash) history.replaceState(null, '', location.pathname + '?u=' + encodeURIComponent(u) + (rest.length ? '&a=' + encodeURIComponent(rest.join('&')) : ''));
+    // 아이폰은 '홈 화면에 추가'할 때 처음 열린 주소를 씀 → 주소만 바꾸지 않고 ?... 주소로 실제로 다시 엶
+    if (ios && okUrl(u) && location.hash) { location.replace(location.pathname + '?u=' + encodeURIComponent(u) + (rest.length ? '&a=' + encodeURIComponent(rest.join('&')) : '')); return; }
     if (okUrl(u)) {
       put(K_URL, u);
       if (ios) { if (rest.length && get(K_SEEN) !== rest.join('&')) { pend = rest.join('&'); seenKey = pend; } }   // 처음 한 번만 넘김 (그 뒤는 화면이 스스로 기억)
@@ -58,7 +59,7 @@
     var sa = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
     var m = document.getElementById('msg');
     if (ios && sa) m.querySelector('p').innerHTML = '이 아이콘에는 메신저 정보가 없습니다.<br>아이콘을 지운 뒤, <b>사파리</b>에서 TOPLAY를 열고<br><b>⚙ 설정 → 홈 화면 추가 방법 → 앱으로 설치</b><br>→ 새 창에서 공유(□↑) → <b>홈 화면에 추가</b>를 다시 해 주세요.';
-    m.insertAdjacentHTML('beforeend', '<p style="opacity:.6;font-size:12px">진단: ' + (ios ? 'iOS' : 'other') + ' · ' + (sa ? 'app' : 'browser') + ' · hash ' + location.hash.length + ' · q ' + q.length + ' · v6</p>');
+    m.insertAdjacentHTML('beforeend', '<p style="opacity:.6;font-size:12px">진단: ' + (ios ? 'iOS' : 'other') + ' · ' + (sa ? 'app' : 'browser') + ' · hash ' + location.hash.length + ' · q ' + q.length + ' · v7</p>');
     m.style.display = 'block'; return;
   }
   if (!ios) pend = get(K_PEND);
@@ -69,7 +70,7 @@
   if (ios && pend && !navigator.standalone) {   // 사파리에서 열린 설치 창: 지금 이 주소 그대로 홈 화면에 추가하라고 안내
     var b = document.createElement('div');
     b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:9;background:#1d2330;color:#fff;border-radius:12px;padding:12px 40px 12px 14px;font:15px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)';
-    b.innerHTML = '지금 이 창에서 아래 <b>공유(□↑)</b> → <b>홈 화면에 추가</b>를 누르세요.<span style="position:absolute;right:12px;top:8px;font-size:20px;cursor:pointer">×</span>';
+    b.innerHTML = '지금 이 창에서 아래 <b>공유(□↑)</b> → <b>홈 화면에 추가</b>를 누르세요. <small style="opacity:.6">v7</small><span style="position:absolute;right:12px;top:8px;font-size:20px;cursor:pointer">×</span>';
     b.lastChild.onclick = function () { b.remove(); };
     document.body.appendChild(b);
   }

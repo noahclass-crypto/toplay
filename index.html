@@ -24,28 +24,34 @@
 // TOPLAY 앱 껍데기: 구글 스크립트 화면을 주소창 없이(앱처럼) 보여 주기만 함. 대화·열쇠는 여기에 들어오지 않음.
 // 처음 한 번 #u=<스크립트 주소>&<계정 열쇠> 로 열리면 기억했다가, 계정 열쇠는 화면에 한 번만 넘김 (그 뒤는 화면이 스스로 기억)
 (function () {
-  var K_URL = 'toplay_app_url', K_PEND = 'toplay_app_pending';
+  var K_URL = 'toplay_app_url', K_PEND = 'toplay_app_pending', K_SEEN = 'toplay_app_seen';
   function get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function put(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { } }
   function okUrl(u) { return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u); }
-  var h = location.hash.replace(/^#/, '');
+  // 아이폰·아이패드: 홈 화면 앱은 사파리와 저장 공간이 따로라, 주소(#...)를 그대로 두고 그 주소로 홈 화면에 추가되게 함
+  var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) { var ml = document.querySelector('link[rel=manifest]'); if (ml) ml.parentNode.removeChild(ml); }
+  var h = location.hash.replace(/^#/, ''), pend = '', seenKey = '';
   if (h) {
     var parts = h.split('&'), u = '', rest = [];
     parts.forEach(function (p) {
       if (p.indexOf('u=') === 0) { try { u = decodeURIComponent(p.substring(2)); } catch (e) { } }
       else if (p) rest.push(p);
     });
-    if (okUrl(u)) { put(K_URL, u); put(K_PEND, rest.join('&')); }
-    history.replaceState(null, '', location.pathname + location.search);   // 열쇠를 주소에 남기지 않음 (설치할 때 시작 주소는 깨끗하게)
+    if (okUrl(u)) {
+      put(K_URL, u);
+      if (ios) { if (rest.length && get(K_SEEN) !== rest.join('&')) { pend = rest.join('&'); seenKey = pend; } }   // 처음 한 번만 넘김 (그 뒤는 화면이 스스로 기억)
+      else { put(K_PEND, rest.join('&')); history.replaceState(null, '', location.pathname + location.search); }   // 열쇠를 주소에 남기지 않음 (설치할 때 시작 주소는 깨끗하게)
+    }
   }
   var url = get(K_URL);
   if (!okUrl(url)) { document.getElementById('msg').style.display = 'block'; return; }
-  var pend = get(K_PEND);
+  if (!ios) pend = get(K_PEND);
   var f = document.createElement('iframe');
   f.allow = 'camera; microphone; clipboard-read; clipboard-write; fullscreen; autoplay; web-share; geolocation';
   f.src = url + (pend ? '#' + pend : '');
   document.body.appendChild(f);
-  if (pend) f.addEventListener('load', function () { setTimeout(function () { put(K_PEND, ''); }, 15000); });
+  if (pend) f.addEventListener('load', function () { setTimeout(function () { if (ios) put(K_SEEN, seenKey); else put(K_PEND, ''); }, 15000); });
 })();
 </script>
 </body>
